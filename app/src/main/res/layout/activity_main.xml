@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#121212"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="#1E1E1E"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:layout_marginEnd="6dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AVAILABLE SLOTS"
+                android:textColor="#AAAAAA"
+                android:textSize="11sp" />
+            <TextView
+                android:id="@+id/tvAvailable"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="100 / 100"
+                android:textColor="#4CAF50"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="#1E1E1E"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:layout_marginStart="6dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ENTRY / EXIT"
+                android:textColor="#AAAAAA"
+                android:textSize="11sp" />
+            <TextView
+                android:id="@+id/tvEntryExit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="IN: 0  |  OUT: 0"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#1E1E1E"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cap:"
+            android:textColor="#CCCCCC"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/etCapacity"
+            android:layout_width="55dp"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:text="100"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:gravity="center" />
+
+        <Button
+            android:id="@+id/btnSetCap"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="SET"
+            android:textSize="12sp"
+            android:layout_marginEnd="12dp" />
+
+        <Button
+            android:id="@+id/btnMinus"
+            android:layout_width="42dp"
+            android:layout_height="36dp"
+            android:text="-1"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnPlus"
+            android:layout_width="42dp"
+            android:layout_height="36dp"
+            android:text="+1"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/cameraContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#000000">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/previewView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <View
+            android:id="@+id/virtualLine"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_gravity="top"
+            android:background="#FFEB3B" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Line:"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp" />
+
+        <SeekBar
+            android:id="@+id/seekLine"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="80"
+            android:progress="45" />
+
+        <Button
+            android:id="@+id/btnToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:text="START"
+            android:backgroundTint="#4CAF50"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="RECENT DETECTIONS"
+        android:textColor="#AAAAAA"
+        android:textSize="11sp"
+        android:paddingBottom="4dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="110dp"
+        android:background="#1E1E1E"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/tvLogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Waiting for vehicles..."
+            android:textColor="#E0E0E0"
+            android:textSize="13sp"
+            android:fontFamily="monospace" />
+    </ScrollView>
+
+</LinearLayout>

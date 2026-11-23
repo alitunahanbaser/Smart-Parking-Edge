@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Bundle
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private var lineRatio = 0.55f
     private var isMonitoring = false
     private var isProcessingFrame = false
+    private var camera: Camera? = null
 
     private var pythonEngine: PyObject? = null
     private var ortEnv: OrtEnvironment? = null
@@ -61,7 +63,6 @@ class MainActivity : AppCompatActivity() {
     private val cameraExecutor = Executors.newSingleThreadExecutor()
     private val logHistory = mutableListOf<String>()
 
-    // 10 saniyelik plaka bazlı cooldown ve içerideki araçların giriş zamanı hafızası
     private val plateCooldownMap = mutableMapOf<String, Long>()
     private val activeVehicles = mutableMapOf<String, Long>()
     private val COOLDOWN_MS = 10_000L
@@ -180,6 +181,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupPinchToZoom() {
+        val scaleGestureDetector = ScaleGestureDetector(this,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    val zoomState = camera?.cameraInfo?.zoomState?.value ?: return true
+                    val currentZoom = zoomState.zoomRatio
+                    val newZoom = (currentZoom * detector.scaleFactor)
+                        .coerceIn(zoomState.minZoomRatio, zoomState.maxZoomRatio)
+                    camera?.cameraControl?.setZoomRatio(newZoom)
+                    return true
+                }
+            })
+
+        previewView.setOnTouchListener { _, event ->
+            scaleGestureDetector.onTouchEvent(event)
+            true
+        }
+    }
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -199,7 +219,8 @@ class MainActivity : AppCompatActivity() {
 
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
             cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
+            camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
+            setupPinchToZoom()
         }, ContextCompat.getMainExecutor(this))
     }
 
@@ -221,7 +242,6 @@ class MainActivity : AppCompatActivity() {
             rotated.compress(Bitmap.CompressFormat.JPEG, 70, stream)
             val jpegBytes = stream.toByteArray()
 
-            // 1. Python ile görüntüyü 320x320 tensöre çevir
             val prepList = pyEngine.callAttr("preprocess_frame", jpegBytes).asList()
             val tensorBytes = prepList[0].toJava(ByteArray::class.java)
             val origW = prepList[1].toInt()
@@ -234,7 +254,6 @@ class MainActivity : AppCompatActivity() {
                 env, floatBuffer, longArrayOf(1, 3, 320, 320)
             )
 
-            // 2. ONNX Runtime ile YOLOv8n çalıştır
             val inputName = session.inputNames.iterator().next()
             val outputs = session.run(Collections.singletonMap(inputName, inputTensor))
             val rawOutTensor = outputs[0] as OnnxTensor
@@ -245,7 +264,6 @@ class MainActivity : AppCompatActivity() {
             inputTensor.close()
             outputs.close()
 
-            // 3. Python ile NMS ve sanal çizgi geçiş sayımı yap
             val resStr = pyEngine.callAttr(
                 "postprocess_detections", outBytes, origW, origH, lineRatio
             ).toString()
@@ -276,35 +294,36 @@ class MainActivity : AppCompatActivity() {
                     true
                 )
                 val inputImage = InputImage.fromBitmap(scaledPlate, 0)
-                val trPlateRegex = Regex("(0[1-9]|[1-7][0-9]|8[01])[A-Z]{1,3}[0-9]{2,4}")
+                val trPlateRegex = Regex("^(0[1-9]|[1-7][0-9]|8[01])[A-Z]{1,3}[0-9]{2,4}$")
 
                 textRecognizer.process(inputImage)
                     .addOnSuccessListener { visionText ->
-                        var cleaned = visionText.text
-                            .uppercase()
-                            .filter { it.isLetterOrDigit() }
+                        var matchedPlate: String? = null
 
-                        if (cleaned.startsWith("TR")) {
-                            cleaned = cleaned.removePrefix("TR")
-                        } else if (cleaned.startsWith("T") && cleaned.length > 1 && cleaned[1].isDigit()) {
-                            cleaned = cleaned.removePrefix("T")
-                        }
+                        val lines = visionText.text.uppercase().split("\n")
+                        for (rawLine in lines) {
+                            var cleaned = rawLine.filter { it.isLetterOrDigit() }
 
-                        val firstDigitIdx = cleaned.indexOfFirst { it.isDigit() }
-                        if (firstDigitIdx > 0) {
-                            cleaned = cleaned.substring(firstDigitIdx)
-                        }
+                            if (cleaned.startsWith("TR")) {
+                                cleaned = cleaned.removePrefix("TR")
+                            } else if (cleaned.startsWith("T") && cleaned.length > 1 && cleaned[1].isDigit()) {
+                                cleaned = cleaned.removePrefix("T")
+                            }
 
-                        val matchedPlate = if (cleaned.length in 6..9) {
-                            trPlateRegex.find(cleaned)?.value
-                        } else {
-                            null
+                            val firstDigitIdx = cleaned.indexOfFirst { it.isDigit() }
+                            if (firstDigitIdx > 0) {
+                                cleaned = cleaned.substring(firstDigitIdx)
+                            }
+
+                            if (cleaned.length in 6..9 && trPlateRegex.matches(cleaned)) {
+                                matchedPlate = cleaned
+                                break
+                            }
                         }
 
                         val finalPlate = matchedPlate ?: "UNKNOWN"
                         val nowMs = System.currentTimeMillis()
 
-                        // 10 saniye plaka cooldown kontrolü
                         if (finalPlate != "UNKNOWN") {
                             val lastTime = plateCooldownMap[finalPlate] ?: 0L
                             if (nowMs - lastTime < COOLDOWN_MS) {
@@ -313,7 +332,6 @@ class MainActivity : AppCompatActivity() {
                             plateCooldownMap[finalPlate] = nowMs
                         }
 
-                        // Sayaçları güncelle
                         if (entryDiff > 0) {
                             entryCount += entryDiff
                             occupiedCount = (occupiedCount + entryDiff).coerceAtMost(totalCapacity)
@@ -323,7 +341,6 @@ class MainActivity : AppCompatActivity() {
                             occupiedCount = (occupiedCount - exitDiff).coerceAtLeast(0)
                         }
 
-                        // İçerideki araç hafızası ve kalma süresi hesabı
                         var logSuffix = ""
                         if (finalPlate != "UNKNOWN") {
                             if (dir == "ENTRY") {

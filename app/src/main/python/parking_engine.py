@@ -62,7 +62,7 @@ def postprocess_detections(raw_output_bytes, orig_w, orig_h, line_ratio=0.55):
     boxes = []
     scores = []
     for pred in predictions:
-        car_conf = pred[6]  # Sadece otomobil (car)
+        car_conf = pred[6]
         if car_conf > 0.40:
             cx, cy, bw, bh = pred[:4]
             x1 = int((cx - bw / 2) * scale_x)

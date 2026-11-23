@@ -100,7 +100,7 @@ def postprocess_detections(raw_output_bytes, orig_w, orig_h, line_ratio=0.55):
 
                 if direction is not None:
                     now = time.time()
-                    # 3 saniyelik çizgi kilidi (dur-kalk / titreme koruması)
+
                     if now - last_event_time < 3.0:
                         updated_cars[matched_id] = (cx, cy)
                         continue
